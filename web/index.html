@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>8-Puzzle Visual Solver</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/web/styles.css" />
+  </head>
+  <body>
+    <!-- Decorative background layers -->
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Page header and project description -->
+    <header class="hero">
+      <p class="eyebrow">AI Project Demo</p>
+      <h1>8-Puzzle Visual Solver</h1>
+      <p class="subtitle">
+        Interactively build a puzzle, run BFS/DFS/A*, and compare expanded nodes, depth, and runtime.
+      </p>
+    </header>
+
+    <!-- Main interactive area: board editor + run settings -->
+    <main class="layout">
+      <!-- Left panel: board editing and sample/state input -->
+      <section class="panel control-panel">
+        <h2>Board Editor</h2>
+        <div id="editor-board" class="board"></div>
+
+        <div class="button-row">
+          <button id="random-btn" class="btn">Random Solvable</button>
+          <button id="goal-btn" class="btn btn-ghost">Reset to Goal</button>
+        </div>
+
+        <p class="field-label">Sample Cases</p>
+        <div class="button-row">
+          <button class="btn btn-sample" data-sample="easy">Easy</button>
+          <button class="btn btn-sample" data-sample="medium">Medium</button>
+          <button class="btn btn-sample" data-sample="hard">Hard</button>
+        </div>
+
+        <label class="field-label" for="state-input">State Input</label>
+        <div class="inline-input">
+          <input id="state-input" type="text" placeholder="1 2 3 4 0 6 7 5 8" />
+          <button id="apply-state-btn" class="btn">Apply</button>
+        </div>
+        <p class="hint">Use 0 for blank tile. Click a tile next to blank to move it.</p>
+      </section>
+
+      <!-- Right panel: algorithm and solver controls -->
+      <section class="panel action-panel">
+        <h2>Run Settings</h2>
+
+        <label class="field-label" for="algorithm-select">Algorithm</label>
+        <select id="algorithm-select">
+          <option value="all">All Algorithms</option>
+          <option value="bfs">BFS</option>
+          <option value="dfs">DFS</option>
+          <option value="astar">A*</option>
+        </select>
+
+        <div class="split-fields">
+          <div>
+            <label class="field-label" for="dfs-depth">DFS Depth Limit</label>
+            <input id="dfs-depth" type="number" min="1" value="40" />
+          </div>
+          <div>
+            <label class="field-label" for="dfs-expansions">DFS Max Expansions</label>
+            <input id="dfs-expansions" type="number" min="1" value="200000" />
+          </div>
+        </div>
+
+        <button id="solve-btn" class="btn btn-accent">Solve Puzzle</button>
+        <p id="status" class="status"></p>
+      </section>
+    </main>
+
+    <!-- Results area is hidden until first successful solve -->
+    <section id="results" class="results hidden">
+      <div class="results-top">
+        <h2>Algorithm Results</h2>
+      </div>
+
+      <!-- Summary metric cards per algorithm -->
+      <div id="summary-cards" class="summary-cards"></div>
+
+      <!-- Lightweight chart blocks rendered by app.js -->
+      <div class="charts">
+        <article class="chart-card">
+          <h3>Expanded Nodes</h3>
+          <div id="expanded-bars" class="bars"></div>
+        </article>
+        <article class="chart-card">
+          <h3>Solution Depth</h3>
+          <div id="depth-bars" class="bars"></div>
+        </article>
+        <article class="chart-card">
+          <h3>Runtime (seconds)</h3>
+          <div id="time-bars" class="bars"></div>
+        </article>
+      </div>
+
+      <!-- Step-by-step path playback controls -->
+      <section id="path-viewer" class="path-viewer hidden">
+        <div class="path-header">
+          <h3>Path Viewer</h3>
+          <label class="field-label" for="path-algorithm">Path Algorithm</label>
+          <select id="path-algorithm"></select>
+        </div>
+
+        <label class="field-label" for="path-step">Path Step</label>
+        <input id="path-step" type="range" min="0" max="0" value="0" />
+        <p id="path-meta" class="hint"></p>
+        <div id="path-board" class="board small"></div>
+      </section>
+    </section>
+
+    <!-- Frontend logic -->
+    <script src="/web/app.js"></script>
+  </body>
+</html>

@@ -6,6 +6,11 @@ This project solves the 8-puzzle problem using three search algorithms:
 - Depth-First Search (DFS)
 - A* Search with Manhattan Distance heuristic
 
+It now includes both:
+
+- A CLI solver (`puzzle_solver.py`)
+- A web frontend (`web_app.py`) for interactive demos
+
 It is designed for AI coursework on state-space search and heuristic-guided search.
 
 ## AI Topics Covered
@@ -27,6 +32,7 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 	- Maximum frontier size
 - Optional full solution path printing (moves + intermediate states)
 - Optional matplotlib graph for visual performance comparison
+- Interactive frontend with click-to-move board editor and path viewer
 
 ## Project File
 
@@ -39,11 +45,18 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 Optional (for graph feature):
 
 - matplotlib
+- Flask (for web frontend)
 
 Install matplotlib only if you want graphs:
 
 ```bash
 pip install matplotlib
+```
+
+Or install all project dependencies:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## How to Run
@@ -97,6 +110,31 @@ python puzzle_solver.py --algorithm all --plot-save comparison.png
 ```bash
 python puzzle_solver.py --algorithm all --plot --plot-save comparison.png
 ```
+
+## Web Frontend
+
+Run the web app from project root:
+
+```bash
+python web_app.py
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5000
+```
+
+### Web Features
+
+- Click tiles next to the blank tile to build puzzle states
+- Generate random solvable states
+- One-click sample cases (easy, medium, hard)
+- Run BFS / DFS / A* / all algorithms
+- View performance cards (expanded nodes, depth, runtime, frontier)
+- View metric bars for quick comparison
+- Play solution paths step-by-step for solved results
+- Smooth tile transitions for board updates and path playback
 
 ## Input Format
 

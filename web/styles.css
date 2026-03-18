@@ -1,0 +1,404 @@
+/* Theme tokens (colors, surfaces, accents) */
+:root {
+  --bg: #08151e;
+  --panel: rgba(9, 26, 38, 0.84);
+  --panel-border: rgba(161, 233, 255, 0.24);
+  --text: #e6f7ff;
+  --muted: #9ec5d7;
+  --accent: #ff6a3d;
+  --accent-2: #29d3a3;
+  --blue: #54b7ff;
+  --tile: linear-gradient(165deg, #13364c, #0d2838);
+}
+
+/* Base reset */
+* {
+  box-sizing: border-box;
+}
+
+/* Page background and global typography */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Space Grotesk", sans-serif;
+  color: var(--text);
+  background: radial-gradient(circle at 20% 20%, #13374a 0%, #08151e 55%, #060f15 100%);
+  padding: 28px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Subtle grid texture overlay */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  pointer-events: none;
+  z-index: -3;
+}
+
+/* Blurred decorative color orbs */
+.bg-orb {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(35px);
+  pointer-events: none;
+  z-index: -2;
+}
+
+/* Top-right accent orb */
+.orb-a {
+  width: 280px;
+  height: 280px;
+  background: rgba(255, 106, 61, 0.3);
+  top: -60px;
+  right: 8%;
+}
+
+/* Bottom-left accent orb */
+.orb-b {
+  width: 340px;
+  height: 340px;
+  background: rgba(41, 211, 163, 0.22);
+  bottom: -120px;
+  left: -90px;
+}
+
+/* Header block and title typography */
+.hero {
+  max-width: 980px;
+  margin: 0 auto 22px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: "IBM Plex Mono", monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  font-size: 0.8rem;
+}
+
+h1 {
+  margin: 6px 0;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  line-height: 1.15;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  max-width: 760px;
+}
+
+/* Two-column main layout on desktop */
+.layout {
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+}
+
+/* Shared panel/charts visual surface style */
+.panel,
+.chart-card,
+.path-viewer,
+.results {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* Panel spacing */
+.panel {
+  padding: 16px;
+}
+
+h2,
+h3 {
+  margin: 0 0 12px;
+}
+
+/* 3x3 puzzle board grid */
+.board {
+  width: min(100%, 350px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* Individual tile style */
+.tile {
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 12px;
+  font-size: clamp(1.15rem, 2.7vw, 1.8rem);
+  font-weight: 700;
+  color: #f4fbff;
+  background: var(--tile);
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+/* Entry animation used for board updates */
+.tile-animate {
+  animation: tileShiftIn 180ms cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+/* Tile motion keyframes */
+@keyframes tileShiftIn {
+  from {
+    opacity: 0.45;
+    transform: translateY(8px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hover feedback for clickable tiles */
+.tile:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+
+/* Blank tile style */
+.tile.blank {
+  background: rgba(7, 20, 30, 0.45);
+  border-style: dashed;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* Common row for grouped buttons */
+.button-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+/* Base button style */
+.btn {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--text);
+  background: rgba(16, 42, 60, 0.85);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+}
+
+/* Button hover state */
+.btn:hover {
+  transform: translateY(-1px);
+  background: rgba(20, 50, 70, 0.95);
+}
+
+/* Disabled button state */
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Secondary low-emphasis button */
+.btn-ghost {
+  background: transparent;
+}
+
+/* Sample case buttons */
+.btn-sample {
+  background: rgba(15, 46, 63, 0.88);
+  border-color: rgba(84, 183, 255, 0.35);
+}
+
+/* Sample button hover */
+.btn-sample:hover {
+  background: rgba(22, 59, 79, 0.95);
+}
+
+/* Primary action button */
+.btn-accent {
+  background: linear-gradient(120deg, var(--accent), #ff8b53);
+  border: none;
+  color: #1f0f09;
+  font-weight: 700;
+}
+
+/* Form labels */
+.field-label {
+  display: block;
+  font-size: 0.84rem;
+  color: var(--muted);
+  margin: 4px 0;
+}
+
+/* Input + button inline group */
+.inline-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+/* Text input and select shared style */
+input,
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(7, 22, 33, 0.85);
+  color: var(--text);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+/* Two-column fields in settings panel */
+.split-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+/* Help/status text */
+.status,
+.hint {
+  color: var(--muted);
+  margin: 8px 0 0;
+  font-size: 0.92rem;
+}
+
+/* Results container shown after solving */
+.results {
+  max-width: 980px;
+  margin: 16px auto 0;
+  padding: 16px;
+}
+
+/* Utility class for conditional visibility */
+.hidden {
+  display: none;
+}
+
+/* Responsive card grid for algorithm summaries */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+/* Individual algorithm summary card */
+.summary-card {
+  background: rgba(8, 30, 44, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.summary-card h4 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.summary-card p {
+  margin: 4px 0;
+  font-size: 0.87rem;
+  color: var(--muted);
+}
+
+/* Chart card grid */
+.charts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+/* Inner spacing for chart cards */
+.chart-card {
+  padding: 12px;
+}
+
+/* Vertical stack for custom bar rows */
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Single chart row: label + track + value */
+.bar-row {
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+/* Bar row algorithm label */
+.bar-label {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--muted);
+}
+
+/* Bar track background */
+.bar-track {
+  width: 100%;
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+/* Bar fill gradient */
+.bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--blue), var(--accent-2));
+}
+
+/* Bar value text */
+.bar-value {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--text);
+}
+
+/* Path playback panel */
+.path-viewer {
+  margin-top: 12px;
+  padding: 12px;
+}
+
+/* Header row inside path viewer */
+.path-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Smaller board used in path viewer */
+.path-viewer .board.small {
+  width: min(100%, 250px);
+  margin: 10px 0 0;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 940px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .charts {
+    grid-template-columns: 1fr;
+  }
+}
