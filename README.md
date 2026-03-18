@@ -26,6 +26,7 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 	- Runtime
 	- Maximum frontier size
 - Optional full solution path printing (moves + intermediate states)
+- Optional matplotlib graph for visual performance comparison
 
 ## Project File
 
@@ -35,7 +36,15 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 
 - Python 3.8+
 
-No external packages are required.
+Optional (for graph feature):
+
+- matplotlib
+
+Install matplotlib only if you want graphs:
+
+```bash
+pip install matplotlib
+```
 
 ## How to Run
 
@@ -69,6 +78,24 @@ python puzzle_solver.py --algorithm dfs --dfs-depth-limit 40 --dfs-max-expansion
 
 ```bash
 python puzzle_solver.py --show-path
+```
+
+### Show matplotlib comparison graph
+
+```bash
+python puzzle_solver.py --algorithm all --plot
+```
+
+### Save graph as image file
+
+```bash
+python puzzle_solver.py --algorithm all --plot-save comparison.png
+```
+
+### Show and save graph together
+
+```bash
+python puzzle_solver.py --algorithm all --plot --plot-save comparison.png
 ```
 
 ## Input Format
