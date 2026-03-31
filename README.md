@@ -10,6 +10,7 @@ It now includes both:
 
 - A CLI solver (`puzzle_solver.py`)
 - A web frontend (`web_app.py`) for interactive demos
+- A supervised ML extension that learns A*'s best next move
 
 It is designed for AI coursework on state-space search and heuristic-guided search.
 
@@ -20,6 +21,8 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 - Informed search (A*)
 - Manhattan distance heuristic
 - Performance comparison across algorithms
+- Supervised learning with a Random Forest classifier
+- Expert-label generation using A* solutions
 
 ## Features
 
@@ -33,6 +36,7 @@ It is designed for AI coursework on state-space search and heuristic-guided sear
 - Optional full solution path printing (moves + intermediate states)
 - Optional matplotlib graph for visual performance comparison
 - Interactive frontend with click-to-move board editor and path viewer
+- ML next-move predictor trained on solver-generated examples
 
 ## Project File
 
@@ -46,6 +50,7 @@ Optional (for graph feature):
 
 - matplotlib
 - Flask (for web frontend)
+- scikit-learn (for ML extension)
 
 Install matplotlib only if you want graphs:
 
@@ -111,6 +116,46 @@ python puzzle_solver.py --algorithm all --plot-save comparison.png
 python puzzle_solver.py --algorithm all --plot --plot-save comparison.png
 ```
 
+## Machine Learning Extension
+
+The project now includes a supervised learning extension that predicts the best next move for a puzzle state.
+
+### How the ML part works
+
+- We generate solvable states by scrambling the goal board
+- We solve those states with A*
+- We use A*'s first optimal move as the training label
+- We train a Random Forest classifier to imitate that decision
+
+### Train the model
+
+```bash
+python train_ml_model.py
+```
+
+Optional example with custom settings:
+
+```bash
+python train_ml_model.py --samples 1500 --estimators 250 --export-csv data/next_move_dataset.csv
+```
+
+### What gets saved
+
+- `models/next_move_model.pkl`: trained classifier bundle
+- `models/next_move_model_info.json`: training metrics summary
+
+### Web demo for ML
+
+After training the model, start the web app and use `Predict Next Move (ML)`.
+
+The frontend will show:
+
+- ML predicted move
+- Model confidence
+- Training accuracy
+- A* expert move for comparison
+- Whether the model matches the expert on that state
+
 ## Web Frontend
 
 Run the web app from project root:
@@ -131,6 +176,7 @@ http://127.0.0.1:5000
 - Generate random solvable states
 - One-click sample cases (easy, medium, hard)
 - Run BFS / DFS / A* / all algorithms
+- Ask the trained ML model for the next move on the current board
 - View performance cards (expanded nodes, depth, runtime, frontier)
 - View metric bars for quick comparison
 - Play solution paths step-by-step for solved results

@@ -8,8 +8,10 @@ from typing import Any, Dict, List
 # Flask powers the lightweight web server and JSON API endpoints.
 from flask import Flask, jsonify, request, send_from_directory
 
+# Shared ML helpers provide model loading and prediction.
+from ml_next_move import MODEL_PATH, model_is_available, predict_next_move
 # Reuse the core puzzle solver logic so CLI and web stay consistent.
-from puzzle_solver import GOAL_STATE, SearchResult, State, get_neighbors, is_solvable, parse_state, run_algorithms
+from puzzle_solver import GOAL_STATE, SearchResult, State, astar, get_neighbors, is_solvable, parse_state, run_algorithms
 
 # Serve static frontend assets from ./web under /web URL prefix.
 app = Flask(__name__, static_folder="web", static_url_path="/web")
@@ -151,6 +153,51 @@ def api_solve() -> Any:
             "start": list(state),
             "goal": list(GOAL_STATE),
             "results": [result_to_json(result, include_path=include_path) for result in results],
+        }
+    )
+
+
+@app.post("/api/ml/predict")
+def api_ml_predict() -> Any:
+    # Parse JSON body safely; fallback to empty dict if body is missing/invalid JSON.
+    body = request.get_json(silent=True) or {}
+
+    # Normalize incoming state to solver tuple format.
+    try:
+        state = normalize_state(body.get("start", list(GOAL_STATE)))
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+
+    # Reject mathematically unsolvable states before prediction.
+    if not is_solvable(state):
+        return jsonify({"ok": False, "error": "Puzzle state is unsolvable."}), 400
+
+    # Return clear setup guidance if the model has not been trained yet.
+    if not model_is_available():
+        return jsonify(
+            {
+                "ok": False,
+                "error": f"ML model not found at {MODEL_PATH.name}. Run: python train_ml_model.py",
+            }
+        ), 400
+
+    # Get learned next-move prediction plus probability breakdown.
+    prediction = predict_next_move(state)
+
+    # Also compute A*'s first move so UI can compare learned vs expert choice.
+    expert_result = astar(state)
+    expert_move = expert_result.moves[0] if expert_result.found and expert_result.moves else None
+
+    return jsonify(
+        {
+            "ok": True,
+            "start": list(state),
+            "predictedMove": prediction["predictedMove"],
+            "confidence": prediction["confidence"],
+            "probabilities": prediction["probabilities"],
+            "trainingMetrics": prediction["metrics"],
+            "expertMove": expert_move,
+            "matchesExpert": prediction["predictedMove"] == expert_move,
         }
     )
 

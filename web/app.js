@@ -40,12 +40,19 @@ const dfsExpansionsInput = document.getElementById("dfs-expansions");
 
 // Primary action buttons.
 const solveBtn = document.getElementById("solve-btn");
+const mlPredictBtn = document.getElementById("ml-predict-btn");
 const randomBtn = document.getElementById("random-btn");
 const goalBtn = document.getElementById("goal-btn");
 const applyStateBtn = document.getElementById("apply-state-btn");
 
 // Preset sample buttons (easy / medium / hard).
 const sampleButtons = document.querySelectorAll("[data-sample]");
+
+// UI elements that display ML model output.
+const mlPanel = document.getElementById("ml-panel");
+const mlPredictionEl = document.getElementById("ml-prediction");
+const mlConfidenceEl = document.getElementById("ml-confidence");
+const mlExpertEl = document.getElementById("ml-expert");
 
 function stateToString(state) {
   // Convert [1,2,3,...] into a human-editable input string.
@@ -154,6 +161,14 @@ function setStatus(message, isError = false) {
 
   // Color status based on success vs error context.
   statusEl.style.color = isError ? "#ff9d85" : "#9ec5d7";
+}
+
+function resetMlPanel() {
+  // Hide stale ML output when board state changes.
+  mlPanel.classList.add("hidden");
+  mlPredictionEl.textContent = "";
+  mlConfidenceEl.textContent = "";
+  mlExpertEl.textContent = "";
 }
 
 function formatNumber(value, decimals = 0) {
@@ -355,6 +370,7 @@ async function randomizeState() {
     boardState = payload.state;
     stateInput.value = stateToString(boardState);
     renderEditor(true);
+  resetMlPanel();
     setStatus("Random solvable state loaded.");
   } catch (error) {
     // Show random-generation failure details.
@@ -365,8 +381,47 @@ async function randomizeState() {
   }
 }
 
+async function predictWithMl() {
+  // Disable button while ML request is in flight.
+  mlPredictBtn.disabled = true;
+  setStatus("Getting ML prediction...");
+
+  try {
+    // Ask backend model for the best next move on current board.
+    const response = await fetch("/api/ml/predict", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ start: boardState })
+    });
+
+    const payload = await response.json();
+    if (!response.ok || !payload.ok) {
+      throw new Error(payload.error || "Failed to get ML prediction.");
+    }
+
+    // Reveal ML panel and render prediction details.
+    mlPanel.classList.remove("hidden");
+    mlPredictionEl.textContent = `Predicted next move: ${payload.predictedMove}`;
+    mlConfidenceEl.textContent = `Confidence: ${formatNumber(payload.confidence * 100, 2)}% | Training accuracy: ${formatNumber((payload.trainingMetrics?.accuracy || 0) * 100, 2)}%`;
+    mlExpertEl.textContent = payload.expertMove
+      ? `A* expert move: ${payload.expertMove} | Match: ${payload.matchesExpert ? "Yes" : "No"}`
+      : "A* expert move unavailable for this state.";
+
+    setStatus("ML prediction ready.");
+  } catch (error) {
+    resetMlPanel();
+    setStatus(error.message || "Error while getting ML prediction.", true);
+  } finally {
+    // Always restore button state.
+    mlPredictBtn.disabled = false;
+  }
+}
+
 // Solve action button.
 solveBtn.addEventListener("click", solveCurrentState);
+
+// ML prediction button.
+mlPredictBtn.addEventListener("click", predictWithMl);
 
 // Random board button.
 randomBtn.addEventListener("click", randomizeState);
@@ -376,6 +431,7 @@ goalBtn.addEventListener("click", () => {
   boardState = [...GOAL];
   stateInput.value = stateToString(boardState);
   renderEditor(true);
+  resetMlPanel();
   setStatus("Board reset to goal state.");
 });
 
@@ -385,6 +441,7 @@ applyStateBtn.addEventListener("click", () => {
     // Parse and validate user-entered board text.
     boardState = parseStateText(stateInput.value);
     renderEditor(true);
+    resetMlPanel();
     setStatus("State applied.");
   } catch (error) {
     // Show parse/validation error.
@@ -408,6 +465,7 @@ sampleButtons.forEach((button) => {
     boardState = [...sample];
     stateInput.value = stateToString(boardState);
     renderEditor(true);
+    resetMlPanel();
     setStatus(`Loaded ${key} sample.`);
   });
 });
@@ -427,4 +485,5 @@ pathStepInput.addEventListener("input", updatePathViewer);
 // Initialize UI on first page load.
 stateInput.value = stateToString(boardState);
 renderEditor();
+resetMlPanel();
 setStatus("Ready. Build a board and click Solve Puzzle.");

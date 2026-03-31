@@ -1,0 +1,13 @@
+{
+  "accuracy": 0.6722222222222223,
+  "trainSize": 720,
+  "testSize": 180,
+  "sampleCount": 900,
+  "labelDistribution": {
+    "D": 229,
+    "L": 221,
+    "R": 217,
+    "U": 233
+  },
+  "featureCount": 22
+}

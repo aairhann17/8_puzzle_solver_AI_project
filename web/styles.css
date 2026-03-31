@@ -119,6 +119,12 @@ h1 {
   padding: 16px;
 }
 
+.action-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 h2,
 h3 {
   margin: 0 0 12px;
@@ -275,6 +281,18 @@ select {
   color: var(--muted);
   margin: 8px 0 0;
   font-size: 0.92rem;
+}
+
+.ml-panel {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(8, 30, 44, 0.85);
+  border: 1px solid rgba(41, 211, 163, 0.26);
+}
+
+.ml-panel h3 {
+  margin-bottom: 8px;
 }
 
 /* Results container shown after solving */
