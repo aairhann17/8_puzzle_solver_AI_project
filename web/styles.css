@@ -295,6 +295,16 @@ select {
   margin-bottom: 8px;
 }
 
+.ml-match-yes {
+  color: #7bffc7;
+  font-weight: 600;
+}
+
+.ml-match-no {
+  color: #ffb39c;
+  font-weight: 600;
+}
+
 /* Results container shown after solving */
 .results {
   max-width: 980px;

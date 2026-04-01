@@ -51,9 +51,13 @@ def state_to_features(state: State) -> List[int]:
 
 # Build a solvable random state by making legal moves from the goal state.
 def random_reachable_state(scramble_steps: int, rng: random.Random) -> State:
+    # Start from solved board so every generated board is reachable and solvable.
     state = GOAL_STATE
+
+    # Store previous state to reduce immediate backtracking.
     previous: Optional[State] = None
 
+    # Apply random legal moves to scramble the board.
     for _ in range(max(1, scramble_steps)):
         options = [nxt for _, nxt in get_neighbors(state) if nxt != previous]
         next_state = rng.choice(options)
@@ -69,10 +73,16 @@ def generate_labeled_examples(
     max_scramble: int = 28,
     seed: int = 42,
 ) -> List[Dict[str, Any]]:
+    # Local RNG keeps generation reproducible for demos and comparisons.
     rng = random.Random(seed)
+
+    # Collected training rows.
     examples: List[Dict[str, Any]] = []
+
+    # Track seen states to avoid duplicate rows.
     seen: set[State] = set()
 
+    # Keep generating until we reach desired sample count.
     while len(examples) < sample_count:
         scramble_steps = rng.randint(min_scramble, max_scramble)
         state = random_reachable_state(scramble_steps, rng)
@@ -102,13 +112,16 @@ def generate_labeled_examples(
 
 # Optional helper for exporting generated examples into a CSV file.
 def export_examples_to_csv(examples: Sequence[Dict[str, Any]], output_path: Path | str) -> None:
+    # Normalize path and ensure target directory exists.
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Define CSV columns for both raw board and engineered features.
     fieldnames = [f"cell_{index}" for index in range(9)]
     fieldnames += [f"tile_{tile}_pos" for tile in range(9)]
     fieldnames += ["blank_row", "blank_col", "misplaced_tiles", "manhattan_distance", "label", "solution_depth", "scramble_steps"]
 
+    # Write header and one row per generated example.
     with output_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -128,9 +141,11 @@ def train_next_move_model(
     estimators: int = 200,
     seed: int = 42,
 ) -> Tuple[RandomForestClassifier, Dict[str, Any]]:
+    # Build feature matrix and labels from example dicts.
     features = [example["features"] for example in examples]
     labels = [example["label"] for example in examples]
 
+    # Split data so we can report unbiased held-out accuracy.
     train_features, test_features, train_labels, test_labels = train_test_split(
         features,
         labels,
@@ -139,6 +154,7 @@ def train_next_move_model(
         stratify=labels,
     )
 
+    # Configure and train the classifier.
     model = RandomForestClassifier(
         n_estimators=estimators,
         max_features="sqrt",
@@ -148,9 +164,11 @@ def train_next_move_model(
     )
     model.fit(train_features, train_labels)
 
+    # Evaluate on test split.
     predictions = model.predict(test_features)
     accuracy = accuracy_score(test_labels, predictions)
 
+    # Store summary metrics that are useful for app display and presentation.
     metrics: Dict[str, Any] = {
         "accuracy": float(accuracy),
         "trainSize": len(train_features),
@@ -164,26 +182,32 @@ def train_next_move_model(
 
 # Save both binary model bundle and human-readable metadata.
 def save_model_bundle(model: RandomForestClassifier, metrics: Dict[str, Any]) -> None:
+    # Ensure model output directory exists.
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Bundle model + metadata so one file can be loaded by the web app.
     bundle = {
         "model": model,
         "metrics": metrics,
         "moveLabels": list(MOVE_LABELS),
     }
 
+    # Save binary model artifact.
     with MODEL_PATH.open("wb") as handle:
         pickle.dump(bundle, handle)
 
+    # Save human-readable metrics file.
     with MODEL_INFO_PATH.open("w", encoding="utf-8") as handle:
         json.dump(metrics, handle, indent=2)
 
+    # Clear loader cache so web app immediately sees latest model.
     load_model_bundle.cache_clear()
 
 
 # Cached model loader so repeated web requests stay fast.
 @lru_cache(maxsize=1)
 def load_model_bundle(model_path: Optional[Path] = None) -> Dict[str, Any]:
+    # Use default model location unless caller overrides it.
     path = model_path or MODEL_PATH
     with path.open("rb") as handle:
         return pickle.load(handle)
@@ -191,21 +215,26 @@ def load_model_bundle(model_path: Optional[Path] = None) -> Dict[str, Any]:
 
 # Convenience helper for checking whether a trained model exists yet.
 def model_is_available(model_path: Optional[Path] = None) -> bool:
+    # Quick existence check used by API before prediction requests.
     return (model_path or MODEL_PATH).exists()
 
 
 # Predict the best next move for a given puzzle state.
 def predict_next_move(state: State, model_path: Optional[Path] = None) -> Dict[str, Any]:
+    # Load trained model bundle.
     bundle = load_model_bundle(model_path)
     model: RandomForestClassifier = bundle["model"]
 
+    # Predict probability distribution across move labels.
     probabilities = model.predict_proba([state_to_features(state)])[0]
     classes = list(model.classes_)
 
+    # Choose highest-probability move as final prediction.
     best_index = max(range(len(probabilities)), key=probabilities.__getitem__)
     best_move = classes[best_index]
     confidence = float(probabilities[best_index])
 
+    # Also return ranked probability table for UI transparency.
     sorted_scores = sorted(
         (
             {"move": move, "probability": float(probability)}
@@ -215,6 +244,7 @@ def predict_next_move(state: State, model_path: Optional[Path] = None) -> Dict[s
         reverse=True,
     )
 
+    # Return both prediction and model metadata used in demo panel.
     return {
         "predictedMove": best_move,
         "confidence": confidence,

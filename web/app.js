@@ -1,5 +1,7 @@
 // Goal board used for reset and initial page load.
 const GOAL = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+// Index offsets describing how blank position changes for each move.
+const MOVE_DELTAS = { U: -3, D: 3, L: -1, R: 1 };
 
 // Mutable board state currently shown in the editor.
 let boardState = [...GOAL];
@@ -19,6 +21,10 @@ let pathStateMap = {};
 
 // Currently selected algorithm in the path viewer dropdown.
 let currentPathAlgorithm = "";
+// Tracks whether ML autoplay loop should keep running.
+let mlAutoplayActive = false;
+// Holds cumulative stats for current autoplay session.
+let mlRunStats = null;
 
 // Main board and path viewer board containers.
 const editorBoard = document.getElementById("editor-board");
@@ -41,9 +47,12 @@ const dfsExpansionsInput = document.getElementById("dfs-expansions");
 // Primary action buttons.
 const solveBtn = document.getElementById("solve-btn");
 const mlPredictBtn = document.getElementById("ml-predict-btn");
+const mlPlayBtn = document.getElementById("ml-play-btn");
+const mlStopBtn = document.getElementById("ml-stop-btn");
 const randomBtn = document.getElementById("random-btn");
 const goalBtn = document.getElementById("goal-btn");
 const applyStateBtn = document.getElementById("apply-state-btn");
+const mlSpeedSelect = document.getElementById("ml-speed");
 
 // Preset sample buttons (easy / medium / hard).
 const sampleButtons = document.querySelectorAll("[data-sample]");
@@ -53,10 +62,42 @@ const mlPanel = document.getElementById("ml-panel");
 const mlPredictionEl = document.getElementById("ml-prediction");
 const mlConfidenceEl = document.getElementById("ml-confidence");
 const mlExpertEl = document.getElementById("ml-expert");
+const mlMatchEl = document.getElementById("ml-match");
+const mlTopMovesEl = document.getElementById("ml-top-moves");
+const mlRunStatsEl = document.getElementById("ml-run-stats");
 
 function stateToString(state) {
   // Convert [1,2,3,...] into a human-editable input string.
   return state.join(" ");
+}
+
+function sleep(ms) {
+  // Simple helper to delay autoplay frames for better visibility.
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isGoalState(state) {
+  // True only when every tile matches the goal board at the same index.
+  return state.every((value, index) => value === GOAL[index]);
+}
+
+function applyMoveIfLegal(state, move) {
+  // Find blank tile and compute its row/column.
+  const blankIndex = state.indexOf(0);
+  const blankRow = Math.floor(blankIndex / 3);
+  const blankCol = blankIndex % 3;
+
+  // Guard against moves that would leave board bounds.
+  if (move === "U" && blankRow === 0) return null;
+  if (move === "D" && blankRow === 2) return null;
+  if (move === "L" && blankCol === 0) return null;
+  if (move === "R" && blankCol === 2) return null;
+
+  // Swap blank with target tile and return the new state.
+  const swapIndex = blankIndex + MOVE_DELTAS[move];
+  const next = [...state];
+  [next[blankIndex], next[swapIndex]] = [next[swapIndex], next[blankIndex]];
+  return next;
 }
 
 function parseStateText(text) {
@@ -169,6 +210,52 @@ function resetMlPanel() {
   mlPredictionEl.textContent = "";
   mlConfidenceEl.textContent = "";
   mlExpertEl.textContent = "";
+  mlMatchEl.textContent = "";
+  mlTopMovesEl.textContent = "";
+  mlRunStatsEl.textContent = "";
+}
+
+function resetMlRunStats() {
+  // Reset counters each time a new autoplay run starts.
+  mlRunStats = {
+    steps: 0,
+    matches: 0,
+    mismatches: 0
+  };
+}
+
+function renderMlPanel(payload) {
+  // Ensure panel is visible before populating values.
+  mlPanel.classList.remove("hidden");
+
+  // Primary ML output details.
+  mlPredictionEl.textContent = `Predicted next move: ${payload.predictedMove}`;
+  mlConfidenceEl.textContent = `Confidence: ${formatNumber(payload.confidence * 100, 2)}% | Training accuracy: ${formatNumber((payload.trainingMetrics?.accuracy || 0) * 100, 2)}%`;
+
+  // Expert move from A* used for side-by-side comparison.
+  mlExpertEl.textContent = payload.expertMove
+    ? `A* expert move: ${payload.expertMove}`
+    : "A* expert move unavailable for this state.";
+
+  // Visual emphasis for match/mismatch outcome.
+  if (payload.expertMove) {
+    mlMatchEl.textContent = `Match with expert: ${payload.matchesExpert ? "Yes" : "No"}`;
+    mlMatchEl.className = `hint ${payload.matchesExpert ? "ml-match-yes" : "ml-match-no"}`;
+  } else {
+    mlMatchEl.textContent = "Match with expert: N/A";
+    mlMatchEl.className = "hint";
+  }
+
+  // Show top 3 probabilities so users can inspect model confidence spread.
+  const topMoves = (payload.probabilities || []).slice(0, 3);
+  mlTopMovesEl.textContent = topMoves.length
+    ? `Top moves: ${topMoves.map((item) => `${item.move} (${formatNumber(item.probability * 100, 1)}%)`).join(" | ")}`
+    : "Top moves: unavailable";
+
+  // If autoplay is active, show current run counters.
+  if (mlRunStats) {
+    mlRunStatsEl.textContent = `ML run stats -> Steps: ${mlRunStats.steps}, Matches: ${mlRunStats.matches}, Mismatches: ${mlRunStats.mismatches}`;
+  }
 }
 
 function formatNumber(value, decimals = 0) {
@@ -370,7 +457,7 @@ async function randomizeState() {
     boardState = payload.state;
     stateInput.value = stateToString(boardState);
     renderEditor(true);
-  resetMlPanel();
+    resetMlPanel();
     setStatus("Random solvable state loaded.");
   } catch (error) {
     // Show random-generation failure details.
@@ -381,31 +468,29 @@ async function randomizeState() {
   }
 }
 
+async function requestMlPrediction() {
+  // Shared ML request helper used by both single prediction and autoplay.
+  const response = await fetch("/api/ml/predict", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ start: boardState })
+  });
+
+  const payload = await response.json();
+  if (!response.ok || !payload.ok) {
+    throw new Error(payload.error || "Failed to get ML prediction.");
+  }
+  return payload;
+}
+
 async function predictWithMl() {
   // Disable button while ML request is in flight.
   mlPredictBtn.disabled = true;
   setStatus("Getting ML prediction...");
 
   try {
-    // Ask backend model for the best next move on current board.
-    const response = await fetch("/api/ml/predict", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ start: boardState })
-    });
-
-    const payload = await response.json();
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "Failed to get ML prediction.");
-    }
-
-    // Reveal ML panel and render prediction details.
-    mlPanel.classList.remove("hidden");
-    mlPredictionEl.textContent = `Predicted next move: ${payload.predictedMove}`;
-    mlConfidenceEl.textContent = `Confidence: ${formatNumber(payload.confidence * 100, 2)}% | Training accuracy: ${formatNumber((payload.trainingMetrics?.accuracy || 0) * 100, 2)}%`;
-    mlExpertEl.textContent = payload.expertMove
-      ? `A* expert move: ${payload.expertMove} | Match: ${payload.matchesExpert ? "Yes" : "No"}`
-      : "A* expert move unavailable for this state.";
+    const payload = await requestMlPrediction();
+    renderMlPanel(payload);
 
     setStatus("ML prediction ready.");
   } catch (error) {
@@ -417,17 +502,124 @@ async function predictWithMl() {
   }
 }
 
+async function autoplayWithMl() {
+  // Prevent multiple autoplay loops from running at once.
+  if (mlAutoplayActive) {
+    return;
+  }
+
+  // Lock UI controls that would interfere with sequential playback.
+  mlAutoplayActive = true;
+  mlPlayBtn.disabled = true;
+  mlStopBtn.disabled = false;
+  mlPredictBtn.disabled = true;
+  solveBtn.disabled = true;
+  randomBtn.disabled = true;
+  goalBtn.disabled = true;
+  applyStateBtn.disabled = true;
+  sampleButtons.forEach((button) => {
+    button.disabled = true;
+  });
+
+  // Initialize run counters and playback settings.
+  resetMlRunStats();
+  setStatus("Running ML autoplay...");
+
+  const maxSteps = 40;
+  const delayMs = Number(mlSpeedSelect.value || "650");
+
+  try {
+    // Iterate up to max steps or until stop/solve condition is met.
+    for (let step = 0; step < maxSteps && mlAutoplayActive; step++) {
+      // Exit early if board is already solved.
+      if (isGoalState(boardState)) {
+        setStatus(`ML autoplay solved the puzzle in ${step} step(s).`);
+        break;
+      }
+
+      // Query model prediction for current board.
+      const payload = await requestMlPrediction();
+      renderMlPanel(payload);
+
+      // Update match statistics for this step.
+      mlRunStats.steps += 1;
+      if (payload.matchesExpert) {
+        mlRunStats.matches += 1;
+      } else {
+        mlRunStats.mismatches += 1;
+      }
+      mlRunStatsEl.textContent = `ML run stats -> Steps: ${mlRunStats.steps}, Matches: ${mlRunStats.matches}, Mismatches: ${mlRunStats.mismatches}`;
+
+      // Apply predicted move; abort when illegal move is suggested.
+      const next = applyMoveIfLegal(boardState, payload.predictedMove);
+      if (!next) {
+        setStatus("ML predicted an illegal move for this state. Autoplay stopped.", true);
+        break;
+      }
+
+      // Commit board update and render animated transition.
+      boardState = next;
+      stateInput.value = stateToString(boardState);
+      renderEditor(true);
+
+      // Delay next frame based on selected speed.
+      await sleep(delayMs);
+
+      // Re-check solved condition after applying move.
+      if (isGoalState(boardState)) {
+        setStatus(`ML autoplay solved the puzzle in ${mlRunStats.steps} step(s).`);
+        break;
+      }
+    }
+
+    // If loop ended naturally without solving, report summary status.
+    if (mlAutoplayActive && !isGoalState(boardState)) {
+      setStatus(`ML autoplay finished after ${maxSteps} step(s) without solving.`);
+    }
+  } catch (error) {
+    // Surface backend/network/prediction failures to user.
+    setStatus(error.message || "Error during ML autoplay.", true);
+  } finally {
+    // Always unlock controls, even when errors occur.
+    mlAutoplayActive = false;
+    mlPlayBtn.disabled = false;
+    mlStopBtn.disabled = true;
+    mlPredictBtn.disabled = false;
+    solveBtn.disabled = false;
+    randomBtn.disabled = false;
+    goalBtn.disabled = false;
+    applyStateBtn.disabled = false;
+    sampleButtons.forEach((button) => {
+      button.disabled = false;
+    });
+  }
+}
+
+function stopMlAutoplay() {
+  // Manual stop request from the user.
+  if (!mlAutoplayActive) {
+    return;
+  }
+  mlAutoplayActive = false;
+  setStatus("ML autoplay stopped.");
+}
+
 // Solve action button.
 solveBtn.addEventListener("click", solveCurrentState);
 
 // ML prediction button.
 mlPredictBtn.addEventListener("click", predictWithMl);
 
+// ML autoplay controls.
+mlPlayBtn.addEventListener("click", autoplayWithMl);
+mlStopBtn.addEventListener("click", stopMlAutoplay);
+
 // Random board button.
 randomBtn.addEventListener("click", randomizeState);
 
 // Reset editor board back to solved goal state.
 goalBtn.addEventListener("click", () => {
+  stopMlAutoplay();
   boardState = [...GOAL];
   stateInput.value = stateToString(boardState);
   renderEditor(true);
@@ -437,6 +629,7 @@ goalBtn.addEventListener("click", () => {
 
 // Apply manually typed board input to editor state.
 applyStateBtn.addEventListener("click", () => {
+  stopMlAutoplay();
   try {
     // Parse and validate user-entered board text.
     boardState = parseStateText(stateInput.value);
@@ -452,6 +645,7 @@ applyStateBtn.addEventListener("click", () => {
 // Load one of the predefined sample boards.
 sampleButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    stopMlAutoplay();
     // Read sample key from button data attribute.
     const key = button.dataset.sample;
     const sample = SAMPLE_CASES[key];

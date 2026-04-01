@@ -79,6 +79,18 @@
 
         <button id="solve-btn" class="btn btn-accent">Solve Puzzle</button>
         <button id="ml-predict-btn" class="btn">Predict Next Move (ML)</button>
+        <div class="button-row">
+          <button id="ml-play-btn" class="btn">Play with ML</button>
+          <button id="ml-stop-btn" class="btn btn-ghost" disabled>Stop ML</button>
+        </div>
+
+        <label class="field-label" for="ml-speed">ML Playback Speed</label>
+        <select id="ml-speed">
+          <option value="950">Slow</option>
+          <option value="650" selected>Normal</option>
+          <option value="350">Fast</option>
+        </select>
+
         <p id="status" class="status"></p>
 
         <section id="ml-panel" class="ml-panel hidden">
@@ -86,6 +98,9 @@
           <p id="ml-prediction" class="hint"></p>
           <p id="ml-confidence" class="hint"></p>
           <p id="ml-expert" class="hint"></p>
+          <p id="ml-match" class="hint"></p>
+          <p id="ml-top-moves" class="hint"></p>
+          <p id="ml-run-stats" class="hint"></p>
         </section>
       </section>
     </main>
