@@ -1,13 +1,13 @@
 {
-  "accuracy": 0.6722222222222223,
-  "trainSize": 720,
-  "testSize": 180,
-  "sampleCount": 900,
+  "accuracy": 0.5916666666666667,
+  "trainSize": 960,
+  "testSize": 240,
+  "sampleCount": 1200,
   "labelDistribution": {
-    "D": 229,
-    "L": 221,
-    "R": 217,
-    "U": 233
+    "D": 306,
+    "L": 281,
+    "R": 291,
+    "U": 322
   },
   "featureCount": 22
 }
