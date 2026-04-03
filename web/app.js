@@ -47,6 +47,7 @@ const dfsExpansionsInput = document.getElementById("dfs-expansions");
 // Primary action buttons.
 const solveBtn = document.getElementById("solve-btn");
 const mlPredictBtn = document.getElementById("ml-predict-btn");
+const mlStepBtn = document.getElementById("ml-step-btn");
 const mlPlayBtn = document.getElementById("ml-play-btn");
 const mlStopBtn = document.getElementById("ml-stop-btn");
 const randomBtn = document.getElementById("random-btn");
@@ -502,6 +503,60 @@ async function predictWithMl() {
   }
 }
 
+async function stepWithMl() {
+  // Prevent single-step action from interrupting a running autoplay loop.
+  if (mlAutoplayActive) {
+    return;
+  }
+
+  // No action is needed if puzzle is already solved.
+  if (isGoalState(boardState)) {
+    setStatus("Puzzle is already solved.");
+    return;
+  }
+
+  // Lock step/predict controls while this one-step request is processed.
+  mlStepBtn.disabled = true;
+  mlPredictBtn.disabled = true;
+  setStatus("Applying one ML move...");
+
+  try {
+    // Ask the model for the next recommended action and show details.
+    const payload = await requestMlPrediction();
+    renderMlPanel(payload);
+
+    // Apply the predicted move once and stop immediately.
+    const next = applyMoveIfLegal(boardState, payload.predictedMove);
+    if (!next) {
+      throw new Error("ML predicted an illegal move for this state.");
+    }
+
+    boardState = next;
+    stateInput.value = stateToString(boardState);
+    renderEditor(true);
+
+    // Update one-step stats so the panel still feels informative.
+    mlRunStats = {
+      steps: 1,
+      matches: payload.matchesExpert ? 1 : 0,
+      mismatches: payload.matchesExpert ? 0 : 1
+    };
+    mlRunStatsEl.textContent = `ML run stats -> Steps: ${mlRunStats.steps}, Matches: ${mlRunStats.matches}, Mismatches: ${mlRunStats.mismatches}`;
+
+    if (isGoalState(boardState)) {
+      setStatus("ML applied one move and solved the puzzle.");
+    } else {
+      setStatus(`ML applied one move: ${payload.predictedMove}`);
+    }
+  } catch (error) {
+    setStatus(error.message || "Error while applying ML move.", true);
+  } finally {
+    // Restore button state after the step completes.
+    mlStepBtn.disabled = false;
+    mlPredictBtn.disabled = false;
+  }
+}
+
 async function autoplayWithMl() {
   // Prevent multiple autoplay loops from running at once.
   if (mlAutoplayActive) {
@@ -513,6 +568,7 @@ async function autoplayWithMl() {
   mlPlayBtn.disabled = true;
   mlStopBtn.disabled = false;
   mlPredictBtn.disabled = true;
+  mlStepBtn.disabled = true;
   solveBtn.disabled = true;
   randomBtn.disabled = true;
   goalBtn.disabled = true;
@@ -585,6 +641,7 @@ async function autoplayWithMl() {
     mlPlayBtn.disabled = false;
     mlStopBtn.disabled = true;
     mlPredictBtn.disabled = false;
+    mlStepBtn.disabled = false;
     solveBtn.disabled = false;
     randomBtn.disabled = false;
     goalBtn.disabled = false;
@@ -609,6 +666,9 @@ solveBtn.addEventListener("click", solveCurrentState);
 
 // ML prediction button.
 mlPredictBtn.addEventListener("click", predictWithMl);
+
+// ML one-step control for demo-friendly single moves.
+mlStepBtn.addEventListener("click", stepWithMl);
 
 // ML autoplay controls.
 mlPlayBtn.addEventListener("click", autoplayWithMl);

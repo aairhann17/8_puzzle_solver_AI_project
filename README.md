@@ -31,6 +31,7 @@ It includes:
 - Optional matplotlib comparison plotting and image export
 - Web interface with interactive board editing and solution playback
 - ML next-move prediction with confidence values
+- One-click `ML Step` control for controlled live demos
 - ML-vs-A* expert comparison (match/mismatch)
 - ML autoplay mode with speed control and run stats
 
@@ -176,6 +177,7 @@ Web demo highlights:
 - BFS/DFS/A*/all execution and metrics display
 - Step-by-step solution path viewer
 - ML next-move prediction with confidence
+- Use the `ML Step` button to apply one ML move at a time for step-by-step explanation
 - Expert comparison against A* on the same state
 - ML autoplay with stop control and speed selector
 
