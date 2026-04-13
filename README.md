@@ -134,7 +134,7 @@ The ML model learns to imitate the expert solver's first optimal move.
 Training process:
 
 1. Generate solvable states by scrambling the goal state.
-2. Solve each state with A*.
+2. Solve each state with A* algorithm.
 3. Use A*'s first move as the label.
 4. Train a RandomForest classifier.
 
